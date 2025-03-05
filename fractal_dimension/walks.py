@@ -26,34 +26,6 @@ def powerLawDistribution(alpha=1, a=1, size=None):
     return (np.random.uniform(1e-10, 1e5, size=size)/a)**(1/(-1 - alpha))
 
 
-@numba.njit()
-def randomWalkIter(currPos, stepSize):
-    """
-    Iterative step for a random walk, optimized using numba.
-    """
-    d = len(currPos)
-    # One angle ranges from [0, 2pi], all others from [0, pi]
-    angleArr = [np.random.uniform(0, np.pi) for _ in range(d-2)] + [np.random.uniform(0, 2*np.pi)]
-
-    # Choose a step size from a random distribution
-    r = stepSize
-
-    if d == 1:
-        newPos = r + currPos
-    else:
-        newPos = np.zeros_like(currPos)
-        # x_i = r cos(\theta_i) \prod_j^{i-1} sin(\theta_j)
-        for j in range(d-1):
-            newPos[j] = r * np.cos(angleArr[j])
-            for k in range(j):
-                newPos[j] *= np.sin(angleArr[k])
-        #newPos[:-1] = [r * np.product(np.sin(angleArr[:j])) * np.cos(angleArr[j]) for j in range(d-1)]
-        # x_n = r \prod_j^{i} sin(\theta_j)
-        newPos[-1] = newPos[-2] * np.tan(angleArr[-1])
-        newPos += currPos
-
-    return newPos
-
 
 STEPSIZE_DISTRIBUTIONS = {"gaussian": gaussianDistribution,
                           "exponential": exponentialDistribution,
@@ -115,6 +87,9 @@ def stochasticWalk(steps, d=2, stepDist='gaussian', mu=0., s=1., a=1., b=1., alp
 
     return walkArr
 
-# Much simpler alternative
+# Much simpler alternative, but sets the step size distribution
+# for each dimension separately, as opposed to the full space.
+# ie. each dimension is totally independent, so you just have
+# several versions of a 1D walk.
 # def randomWalk(steps, d=2):
 #     return np.cumsum(np.random.uniform(-1, 1, size=(steps, d)), axis=0)
